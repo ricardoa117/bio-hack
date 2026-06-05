@@ -90,7 +90,7 @@ export default async function handler(req, res) {
       riesgo_total: riesgoTotalLimitado,
       riesgo_basal: riesgoBasal,
       suma_reportes: sumaNormalizada,
-      cantidad_reportes: reportes?.length || 0,
+      cantidad_reportes: reportes ? reportes.filter(r => r.distancia_m <= 1000).length : 0,
       probabilidades: {
         mosquitos: probMosquitos,
         cucarachas: probCucarachas,
