@@ -60,8 +60,24 @@ export default async function handler(req, res) {
         const horas = (now - new Date(r.created_at)) / 36e5;
         const temporalFactor = Math.max(0, 1 - horas / 72);
         
+        // Calcular distancia manualmente (Haversine) si el RPC no la incluye
+        let dist = r.distancia_m || r.dist_meters;
+        if (dist === undefined) {
+          const R = 6371e3; // Radio de la Tierra en metros
+          const rad = Math.PI / 180;
+          const dLat = (r.lat - latF) * rad;
+          const dLng = (r.lng - lngF) * rad;
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(latF * rad) * Math.cos(r.lat * rad) *
+                    Math.sin(dLng/2) * Math.sin(dLng/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          dist = R * c;
+        }
+
+        r.distancia_real_m = dist; // Guardar para usarlo en cantidad_reportes luego
+
         // Decaimiento espacial: Pierde fuerza exponencialmente después de 1km
-        const spatialFactor = Math.exp(-r.distancia_m / 1500); 
+        const spatialFactor = Math.exp(-dist / 1500); 
         const adjustedPeso = r.peso * temporalFactor * spatialFactor;
 
         if (r.tipo_precursor === 'fuga_agua' || r.tipo_precursor === 'barranca_sucia') pesoAgua += adjustedPeso;
@@ -90,7 +106,7 @@ export default async function handler(req, res) {
       riesgo_total: riesgoTotalLimitado,
       riesgo_basal: riesgoBasal,
       suma_reportes: sumaNormalizada,
-      cantidad_reportes: reportes ? reportes.filter(r => r.distancia_m <= 1000).length : 0,
+      cantidad_reportes: reportes ? reportes.filter(r => r.distancia_real_m <= 1000).length : 0,
       probabilidades: {
         mosquitos: probMosquitos,
         cucarachas: probCucarachas,
