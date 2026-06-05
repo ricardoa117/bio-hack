@@ -493,11 +493,136 @@
 
             <!-- VIEW: CATALOGO -->
             <section id="view-catalogo" class="spa-view">
-                <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-8 shadow-sm text-center xl:max-w-4xl mx-auto mt-10">
-                    <div class="text-5xl mb-4">🛠️</div>
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Catálogo de Soluciones</h2>
-                    <p class="text-gray-500 dark:text-gray-400 mt-4 max-w-lg mx-auto">Aquí encontrarás productos, biopesticidas ecológicos, y servicios profesionales recomendados específicamente para tu nivel de riesgo y tipo de plaga.</p>
-                    <button onclick="switchView('view-dashboard')" class="mt-8 px-6 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors">Volver al inicio</button>
+                <div class="xl:max-w-6xl mx-auto space-y-12 pb-12">
+                    
+                    <div class="mb-6">
+                        <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">Catálogo de Soluciones</h1>
+                        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Alternativas no invasivas y herramientas físicas autorizadas para mitigar riesgos de plagas</p>
+                    </div>
+
+                    <!-- SECCIÓN 1: Moscas y Mosquitos -->
+                    <section class="space-y-6">
+                        <div class="border-b border-gray-200 dark:border-gray-700 pb-3 flex items-center gap-2">
+                            <div class="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707-.707" />
+                                </svg>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 tracking-tight">Control de Moscas y Mosquitos</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                            <!-- Producto 1 -->
+                            <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                <div class="h-48 w-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                                    <img src="img/bugster-pro.jpg" alt="Trampa Bugster Pro Lite UV" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" onerror="this.src='https://via.placeholder.com/400x200?text=Bugster+Pro+Lite+UV'">
+                                </div>
+                                <div class="p-5 flex-1 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Trampa Bugster Pro Lite UV</h3>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed min-h-[48px]">
+                                            Trampa de luz ultravioleta ecológica diseñada para la atracción y captura higiénica de moscas en cocinas comerciales y restaurantes. Utiliza placas adhesivas sin emitir ruidos ni químicos.
+                                        </p>
+                                    </div>
+                                    <div class="mt-5 pt-4 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between gap-4">
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
+                                            No Tóxico
+                                        </span>
+                                        <a href="https://www.mercadolibre.com.mx/trampa-atrapa-moscas-con-lampara-luz-uv-para-restaurante/up/MLMU3823954828" target="_blank" class="inline-flex items-center justify-center rounded-lg bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors">
+                                            Adquirir Producto
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Producto 2 -->
+                            <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                <div class="h-48 w-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                                    <img src="img/arod-bugster.jpg" alt="Arod Bugster 15" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" onerror="this.src='https://via.placeholder.com/400x200?text=Arod+Bugster+15'">
+                                </div>
+                                <div class="p-5 flex-1 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Arod Bugster 15 Trampa de Luz</h3>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed min-h-[48px]">
+                                            Trampa de luz UV suspendida o de pared de alta eficiencia. Fabricada en aluminio anodizado de alta durabilidad, optimizada para espacios industriales, almacenes o accesos de personal.
+                                        </p>
+                                    </div>
+                                    <div class="mt-5 pt-4 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between gap-4">
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
+                                            Uso Industrial
+                                        </span>
+                                        <a href="https://www.mercadolibre.com.mx/arod-bugster-15-trampa-de-luz-moscas/up/MLMU3649575236" target="_blank" class="inline-flex items-center justify-center rounded-lg bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors">
+                                            Adquirir Producto
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
+
+                    <!-- SECCIÓN 2: Control de Roedores -->
+                    <section class="space-y-6">
+                        <div class="border-b border-gray-200 dark:border-gray-700 pb-3 flex items-center gap-2">
+                            <div class="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-lg">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                </svg>
+                            </div>
+                            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 tracking-tight">Control de Roedores (Ratas y Ratones)</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                            <!-- Producto 3 -->
+                            <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                <div class="h-48 w-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                                    <img src="img/trampa-balancin.jpg" alt="Trampa de balancín múltiple captura" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" onerror="this.src='https://via.placeholder.com/400x200?text=Trampa+Balancin'">
+                                </div>
+                                <div class="p-5 flex-1 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Trampa de Balancín Múltiple Captura</h3>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed min-h-[48px]">
+                                            Caja de captura múltiple mecánica de lámina galvanizada con balancín de autoretroceso y ventana transparente de inspección. Permite atrapar vivos múltiples ratones sin uso de cebos envenenados.
+                                        </p>
+                                    </div>
+                                    <div class="mt-5 pt-4 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between gap-4">
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
+                                            Captura Viva
+                                        </span>
+                                        <a href="https://www.mercadolibre.com.mx/trampa-para-ratones-de-balancin-multiple-captura-con-ventana/p/MLM2083123047" target="_blank" class="inline-flex items-center justify-center rounded-lg bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors">
+                                            Adquirir Producto
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Producto 4 -->
+                            <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                                <div class="h-48 w-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                                    <img src="img/trex-trapper.jpg" alt="Mini trampa T-Rex Trapper" class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 hover:scale-105" onerror="this.src='https://via.placeholder.com/400x200?text=Mini+Trampa+T-Rex'">
+                                </div>
+                                <div class="p-5 flex-1 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <h3 class="text-base font-bold text-gray-900 dark:text-gray-100">Mini Trampa T-Rex Trapper</h3>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed min-h-[48px]">
+                                            Trampa mecánica de golpe rápido con ajuste fácil mediante gatillo de presión y dientes entrelazados patentados. Altamente sensible, segura para manejar y de limpieza rápida sin contacto.
+                                        </p>
+                                    </div>
+                                    <div class="mt-5 pt-4 border-t border-gray-50 dark:border-gray-700 flex items-center justify-between gap-4">
+                                        <span class="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-400">
+                                            Acción Rápida
+                                        </span>
+                                        <a href="https://www.mercadolibre.com.mx/mini-trampa-trex-trapper-de-ajuste-facil-para-ratones/up/MLMU564372627" target="_blank" class="inline-flex items-center justify-center rounded-lg bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors">
+                                            Adquirir Producto
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </section>
                 </div>
             </section>
 
