@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioControl — Reporte Ciudadano de Plagas</title>
+    <meta name="description" content="Sistema ciudadano anónimo de reporte y monitoreo de plagas urbanas en tiempo real.">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] } } }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Mapbox GL JS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; padding: 0; }
+        body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+        /* Scrollbars */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; }
+        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        /* Animations */
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .animate-fade-in { animation: fadeInUp .3s ease-out; }
+
+        @keyframes dotPulse { 0%,80%,100%{opacity:.3;transform:scale(.8)} 40%{opacity:1;transform:scale(1)} }
+        .thinking-dot { animation: dotPulse 1.4s ease-in-out infinite; }
+        .thinking-dot:nth-child(2) { animation-delay:.2s; }
+        .thinking-dot:nth-child(3) { animation-delay:.4s; }
+
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+        .skeleton { background:linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%); background-size:200% 100%; animation:shimmer 1.5s ease-in-out infinite; border-radius:.5rem; display:inline-block; }
+        .dark .skeleton { background:linear-gradient(90deg,#374151 25%,#4b5563 50%,#374151 75%); background-size:200% 100%; }
+
+        /* Layout */
+        .app-layout { display:flex; height:100vh; overflow:hidden; }
+        .app-sidebar { width:256px; display:flex; flex-direction:column; flex-shrink:0; transition:transform 0.3s ease, width 0.3s ease; z-index:40; }
+        .app-sidebar.collapsed { width:72px; }
+        .app-sidebar.collapsed .sb-label { display:none; }
+        
+        @media (max-width: 768px) {
+            .app-sidebar { position: absolute; height: 100%; transform: translateX(-100%); }
+            .app-sidebar.mobile-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.1); }
+        }
+
+        .app-main { flex:1; display:flex; flex-direction:column; min-width:0; overflow:hidden; position: relative; }
+        .app-header { height:64px; flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 16px; }
+        .app-content { flex:1; overflow-y:auto; padding:24px; position:relative; }
+
+        /* SPA Views */
+        .spa-view { display: none; height: 100%; flex-direction: column; }
+        .spa-view.active { display: flex; animation: fadeInUp .3s ease-out; }
+
+        /* Mapbox overrides */
+        .mapboxgl-popup-content { border-radius:12px !important; padding:12px 16px !important; font-family:'Inter',sans-serif !important; box-shadow:0 4px 20px rgba(0,0,0,.12) !important; color: #111827; }
+        .dark .mapboxgl-popup-content { background-color: #1f2937 !important; color: #f9fafb !important; }
+        .mapboxgl-popup-close-button { font-size:18px; padding:4px 8px; color:inherit; }
+
+        /* Map marker */
+        .map-marker {
+            width:28px; height:28px; border-radius:50%; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            color:#fff; font-size:14px; font-weight:700;
+            box-shadow: 0 2px 8px rgba(0,0,0,.3);
+            transition: transform .15s ease;
+        }
+        .map-marker:hover { transform:scale(1.2); }
+
+        .map-marker-user {
+            width:20px; height:20px; border-radius:50%; background:#3b82f6;
+            border:3px solid #fff; box-shadow:0 0 0 3px rgba(59,130,246,.3), 0 2px 8px rgba(0,0,0,.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-300">
+
+<div class="app-layout">
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="mobile-overlay" class="fixed inset-0 bg-gray-900/50 z-30 hidden transition-opacity lg:hidden"></div>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar" class="app-sidebar bg-white border-r border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+        <div class="flex items-center justify-between gap-2 h-16 border-b border-gray-100 dark:border-gray-700 px-4">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12c1.5 1.5 4.5 1.5 6 0"/><path d="M12 7v5"/>
+                    </svg>
+                </div>
+                <span class="sb-label text-lg font-bold tracking-tight whitespace-nowrap">Bio<span class="text-emerald-600 dark:text-emerald-400">Control</span></span>
+            </div>
+            <button id="sidebar-toggle" class="hidden md:flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-200 transition-colors" aria-label="Contraer menú">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+            <button id="mobile-sidebar-close" class="md:hidden flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-3 py-5 space-y-1" id="nav-menu">
+            <button data-target="view-dashboard" class="nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 transition-colors">
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span class="sb-label whitespace-nowrap">Inicio / Dashboard</span>
+            </button>
+            <button data-target="view-map" class="nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+                <span class="sb-label whitespace-nowrap">Mapa Interactivo</span>
+            </button>
+            <button data-target="view-condiciones" class="nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 18a3 3 0 1 0 6 0c0-2-3-3-3-6"/></svg>
+                <span class="sb-label whitespace-nowrap">Condiciones de Propagación</span>
+            </button>
+            <button data-target="view-catalogo" class="nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
+                <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <span class="sb-label whitespace-nowrap">Catálogo de Soluciones</span>
+            </button>
+        </nav>
+
+        <div class="border-t border-gray-100 dark:border-gray-700 p-4">
+            <p class="sb-label text-xs leading-relaxed text-gray-400 dark:text-gray-500">Sistema anónimo de reporte ciudadano.</p>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN ===== -->
+    <div class="app-main bg-white dark:bg-gray-900">
+
+        <!-- Top Header -->
+        <header class="app-header border-b border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <button id="mobile-menu-btn" class="md:hidden flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                <div>
+                    <h1 id="header-title" class="text-lg font-bold tracking-tight text-gray-900 dark:text-gray-100">Panel de Riesgo</h1>
+                    <p class="hidden sm:block text-xs text-gray-500 dark:text-gray-400">Monitoreo ciudadano en tiempo real</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 sm:gap-4">
+                <!-- Dark Mode Toggle -->
+                <button id="theme-toggle" class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors" title="Cambiar tema">
+                    <svg id="theme-toggle-light" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+                    <svg id="theme-toggle-dark" class="hidden h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+                </button>
+
+                <button id="open-report-btn" class="inline-flex items-center gap-2 rounded-full sm:rounded-lg bg-emerald-600 dark:bg-emerald-700 px-3 sm:px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span class="hidden sm:inline">Reportar Problema</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="app-content bg-gray-50 dark:bg-gray-900">
+
+            <!-- Global Geo Banner -->
+            <div id="geo-banner" class="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 animate-fade-in shadow-sm">
+                <svg id="geo-icon" class="h-5 w-5 shrink-0 animate-spin text-amber-600 dark:text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                <span id="geo-text">Obteniendo tu ubicación exacta para mayor precisión…</span>
+            </div>
+
+            <!-- VIEW: DASHBOARD -->
+            <section id="view-dashboard" class="spa-view active">
+                
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6 xl:max-w-6xl">
+                    <!-- Tarjeta Riesgo General -->
+                    <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Nivel de Riesgo Local</p>
+                            <span id="card-riesgo-badge" class="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-0.5 text-xs font-semibold text-gray-500 dark:text-gray-300">Cargando</span>
+                        </div>
+                        <p id="card-riesgo-label" class="mt-3 text-4xl font-extrabold tracking-tight text-gray-400 dark:text-gray-500"><span class="skeleton" style="width:100px;height:40px;">&nbsp;</span></p>
+                        <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                            <div id="card-riesgo-bar" class="h-full rounded-full bg-gray-200 dark:bg-gray-600 transition-all duration-1000 ease-out" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tarjeta Reportes -->
+                    <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Focos Cercanos</p>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> En vivo
+                            </span>
+                        </div>
+                        <p id="card-reportes" class="mt-3 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100"><span class="skeleton" style="width:60px;height:40px;">&nbsp;</span></p>
+                        <p id="card-reportes-sub" class="mt-1 text-xs text-gray-500 dark:text-gray-400">Radio de 1 km · últimas 72h</p>
+                    </div>
+
+                    <!-- Tarjeta Clima -->
+                    <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Clima Actual</p>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400">
+                                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                                Satélite
+                            </span>
+                        </div>
+                        <div class="mt-3 flex items-baseline gap-3">
+                            <p id="card-temp" class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-100"><span class="skeleton" style="width:80px;height:40px;">&nbsp;</span></p>
+                            <p id="card-humedad" class="text-sm font-medium text-gray-500 dark:text-gray-400"></p>
+                        </div>
+                        <p id="card-clima-indice" class="mt-1 text-xs text-gray-500 dark:text-gray-400"></p>
+                    </div>
+                </div>
+
+                <!-- Alerta Global -->
+                <div id="alerta-riesgo" class="mb-6 hidden rounded-xl border px-5 py-4 text-sm font-medium animate-fade-in shadow-sm xl:max-w-6xl"></div>
+
+                <!-- Probabilidad de Plagas Específicas -->
+                <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-sm overflow-hidden xl:max-w-6xl mb-6">
+                    <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-5">
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">Probabilidad de Generación de Plagas</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Cálculo basado en precursores cercanos (basura, fugas) y condiciones climáticas actuales.</p>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+                        
+                        <!-- Mosquitos -->
+                        <div class="flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">🦟</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-200">Mosquitos (Dengue)</span>
+                                </div>
+                                <span id="prob-mosquitos-txt" class="text-sm font-bold text-gray-900 dark:text-gray-100">--%</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="prob-mosquitos-bar" class="h-full bg-blue-500 transition-all duration-1000 w-0 rounded-full"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Favorecido por <span class="text-blue-500 dark:text-blue-400 font-medium">Fugas de agua</span> y calor.</p>
+                        </div>
+
+                        <!-- Cucarachas -->
+                        <div class="flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">🪳</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-200">Cucarachas</span>
+                                </div>
+                                <span id="prob-cucarachas-txt" class="text-sm font-bold text-gray-900 dark:text-gray-100">--%</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="prob-cucarachas-bar" class="h-full bg-amber-500 transition-all duration-1000 w-0 rounded-full"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Favorecido por <span class="text-amber-500 dark:text-amber-400 font-medium">Basura Orgánica</span>.</p>
+                        </div>
+
+                        <!-- Ratas -->
+                        <div class="flex flex-col">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xl">🐀</span>
+                                    <span class="font-semibold text-gray-800 dark:text-gray-200">Roedores</span>
+                                </div>
+                                <span id="prob-ratas-txt" class="text-sm font-bold text-gray-900 dark:text-gray-100">--%</span>
+                            </div>
+                            <div class="h-2.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div id="prob-ratas-bar" class="h-full bg-gray-600 dark:bg-gray-400 transition-all duration-1000 w-0 rounded-full"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Favorecido por <span class="font-medium text-gray-600 dark:text-gray-400">Basura y Baldíos</span>.</p>
+                        </div>
+
+                    </div>
+                </div>
+                
+                <!-- Hint to go to map -->
+                <div class="rounded-xl border border-emerald-100 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-900/10 p-5 flex items-center justify-between xl:max-w-6xl">
+                    <div>
+                        <h3 class="text-emerald-800 dark:text-emerald-400 font-semibold text-sm">Explora el Mapa Interactivo</h3>
+                        <p class="text-emerald-600 dark:text-emerald-500 text-xs mt-1">Visualiza los polígonos de riesgo y la ubicación exacta de los focos de infección reportados en tu ciudad.</p>
+                    </div>
+                    <button onclick="switchView('view-map')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm">Abrir Mapa</button>
+                </div>
+
+            </section>
+
+            <!-- VIEW: MAP -->
+            <section id="view-map" class="spa-view">
+                <div class="flex-1 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden min-h-[500px]">
+                    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 px-5 py-4 shrink-0 bg-white dark:bg-gray-800 z-10">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-900 dark:text-gray-100">Mapa Espacial de Focos Activos</h2>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Reportes vivos (últimas 72h) y polígonos de riesgo basal</p>
+                        </div>
+                        <div class="hidden lg:flex flex-col gap-2">
+                            <div class="flex items-center gap-3 text-xs font-medium text-gray-600 dark:text-gray-300">
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded-md"><span class="h-2.5 w-2.5 rounded-full bg-red-500"></span> Orgánica</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded-md"><span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span> Fuga de Agua</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded-md"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Terreno Baldío</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-gray-50 dark:bg-gray-700 rounded-md"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span> Barranca</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs font-medium text-gray-600 dark:text-gray-300">
+                                <span class="font-semibold text-gray-800 dark:text-gray-200">Polígonos de Riesgo Basal:</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-md"><span class="h-3 w-3 border-2 border-red-500 bg-red-500/20 rounded-sm"></span> Alto</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md"><span class="h-3 w-3 border-2 border-amber-500 bg-amber-500/20 rounded-sm"></span> Medio</span>
+                                <span class="flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-md"><span class="h-3 w-3 border-2 border-emerald-500 bg-emerald-500/20 rounded-sm"></span> Bajo</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="map" class="flex-1 w-full bg-gray-100 dark:bg-gray-900"></div>
+                </div>
+            </section>
+
+            <!-- VIEW: CONDICIONES -->
+            <section id="view-condiciones" class="spa-view">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Condiciones de Propagación</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Guía de identificación y prevención de principales plagas locales</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:max-w-6xl pb-8">
+                    <!-- Cucaracha Alemana -->
+                    <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative">
+                            <img src="img/cucaracha-alemana.png" alt="Cucaracha Alemana" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Cucaracha+Alemana'">
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Cucaracha Alemana</h2>
+                            <div class="mb-4">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Propagación
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Requiere ambientes cálidos, húmedos y con acceso cercano a comida y agua. Se propagan rápidamente en cocinas, despensas, motores de electrodomésticos (refrigeradores, microondas) y baños. Tienen una tasa de reproducción sumamente alta.</p>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    Prevención
+                                </h3>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                                    <li>Limpieza profunda de grasa en estufas.</li>
+                                    <li>No dejar trastes sucios ni comida expuesta en la noche.</li>
+                                    <li>Sellar grietas en azulejos y zoclos.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cucaracha Americana -->
+                    <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative">
+                            <img src="img/cucaracha-americana.png" alt="Cucaracha Americana" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Cucaracha+Americana'">
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Cucaracha Americana</h2>
+                            <div class="mb-4">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Propagación
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Prefieren lugares oscuros, cálidos y con mucha humedad, como sótanos, drenajes, alcantarillas, tuberías y registros registros sanitarios. Suelen ingresar a las viviendas desde el exterior buscando alimento, especialmente basura en descomposición.</p>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    Prevención
+                                </h3>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                                    <li>Colocar mallas en coladeras y resumideros.</li>
+                                    <li>Reparar fugas de agua y goteras.</li>
+                                    <li>Mantener la basura exterior en contenedores herméticos.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rata -->
+                    <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative">
+                            <img src="img/rata.png" alt="Rata" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Rata'">
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Rata</h2>
+                            <div class="mb-4">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Propagación
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Proliferan en áreas con acumulación excesiva de basura, escombros, madera apilada y alcantarillas abiertas. Necesitan una fuente constante de agua y alimento. Crean madrigueras subterráneas o en techos.</p>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    Prevención
+                                </h3>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                                    <li>Eliminar acumulación de escombros y cajas viejas.</li>
+                                    <li>No dejar alimento de mascotas en patios por la noche.</li>
+                                    <li>Sellar agujeros en paredes mayores a 2 cm.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Ratón -->
+                    <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative">
+                            <img src="img/raton.png" alt="Ratón" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Raton'">
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Ratón</h2>
+                            <div class="mb-4">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Propagación
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Buscan refugio en interiores, especialmente cuando baja la temperatura. Anidan en espacios pequeños. Se reproducen a un ritmo alarmante si tienen acceso a migajas, semillas o cereales.</p>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    Prevención
+                                </h3>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                                    <li>Guardar granos y cereales en frascos de vidrio.</li>
+                                    <li>Sellar grietas muy pequeñas (pueden pasar por huecos de 6mm).</li>
+                                    <li>Mantener despejadas las bases de los muebles.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Mosco Dengue -->
+                    <div class="flex flex-col rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                        <div class="h-48 w-full bg-gray-200 dark:bg-gray-700 relative">
+                            <img src="img/mosco-dengue.png" alt="Mosco del Dengue" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Mosco+Dengue'">
+                        </div>
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Mosco del Dengue</h2>
+                            <div class="mb-4">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                    Propagación
+                                </h3>
+                                <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">Su condición vital de propagación es el agua limpia y estancada. La hembra deposita sus huevos en las paredes de recipientes con agua. Predominan en climas cálidos y zonas urbanas.</p>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
+                                <h3 class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                    Prevención
+                                </h3>
+                                <ul class="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-1">
+                                    <li>Aplicar la regla: "Lava, tapa, voltea y tira".</li>
+                                    <li>Evitar acumulación de agua en llantas o recipientes.</li>
+                                    <li>Cambiar el agua de floreros y bebederos seguido.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: CATALOGO -->
+            <section id="view-catalogo" class="spa-view">
+                <div class="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 p-8 shadow-sm text-center xl:max-w-4xl mx-auto mt-10">
+                    <div class="text-5xl mb-4">🛠️</div>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Catálogo de Soluciones</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-4 max-w-lg mx-auto">Aquí encontrarás productos, biopesticidas ecológicos, y servicios profesionales recomendados específicamente para tu nivel de riesgo y tipo de plaga.</p>
+                    <button onclick="switchView('view-dashboard')" class="mt-8 px-6 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors">Volver al inicio</button>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- ===== REPORT PANEL ===== -->
+<div id="report-overlay" class="fixed inset-0 z-50 hidden bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
+<div id="report-panel" class="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white dark:bg-gray-900 shadow-2xl transition-transform duration-300 ease-in-out transform translate-x-full border-l border-gray-100 dark:border-gray-800">
+    <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 h-16 shrink-0 bg-white dark:bg-gray-900">
+        <div>
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">Generar Reporte Público</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">100% anónimo</p>
+        </div>
+        <button id="close-report-btn" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto px-6 py-6">
+        <div class="mb-6 flex items-start gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/20 p-4">
+            <svg class="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4.5 8-11a8 8 0 1 0-16 0c0 6.5 8 11 8 11z"/><circle cx="12" cy="11" r="3"/></svg>
+            <p id="geo-report-info" class="text-xs leading-relaxed text-emerald-800 dark:text-emerald-300 font-medium">Detectamos tu ubicación. No pedimos nombre ni correo.</p>
+        </div>
+        <div class="space-y-6">
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">¿Qué observaste?</label>
+                <select id="tipo_precursor" class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none">
+                    <option value="" disabled selected>Selecciona una categoría…</option>
+                    <option value="basura_organica">🗑️ Basura Orgánica acumulada</option>
+                    <option value="basura_inorganica">📦 Basura Inorgánica / Escombros</option>
+                    <option value="fuga_agua">💧 Fuga de Agua / Humedad crónica</option>
+                    <option value="terreno_baldio">🌿 Terreno Baldío sin mantenimiento</option>
+                    <option value="barranca_sucia">🏚️ Barranca Sucia / Drenaje abierto</option>
+                </select>
+            </div>
+            <div>
+                <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Detalles adicionales (Opcional)</label>
+                <textarea id="descripcion" rows="4" placeholder="Ej. Lleva una semana la basura, hay mal olor..." class="w-full resize-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="border-t border-gray-100 dark:border-gray-800 px-6 py-5 bg-gray-50/50 dark:bg-gray-900 shrink-0">
+        <button id="submit-report" class="w-full rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 hover:shadow-emerald-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.98]">Subir Reporte Anónimo</button>
+        <p id="report-success" class="mt-3 hidden text-center text-sm font-bold text-emerald-600 dark:text-emerald-400"></p>
+        <p id="report-error" class="mt-3 hidden text-center text-sm font-bold text-red-600 dark:text-red-400"></p>
+    </div>
+</div>
+
+<!-- ===== CHAT WINDOW ===== -->
+<div id="chat-window" class="fixed bottom-24 right-4 sm:right-6 z-40 hidden flex-col overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl" style="width:min(380px, calc(100vw - 2rem));">
+    <div class="flex items-center gap-3 border-b border-gray-100 dark:border-gray-800 px-4 py-3 bg-white dark:bg-gray-900">
+        <div class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-sm">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 6.96L21 11l-6.61 2.04L12 20l-2.39-6.96L3 11l6.61-2.04L12 2z"/></svg>
+        </div>
+        <div class="flex-1">
+            <p class="text-sm font-bold text-gray-900 dark:text-gray-100">BioAsistente AI</p>
+            <p id="chat-status" class="text-xs font-medium text-emerald-600 dark:text-emerald-400">En línea</p>
+        </div>
+        <button id="close-chat-btn" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors bg-gray-50 dark:bg-gray-800 rounded-full p-1.5">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+    <div id="chat-history" class="bg-gray-50 dark:bg-gray-800/50 px-4 py-4 overflow-y-auto space-y-4" style="height:340px;">
+        <div class="flex items-start gap-2 animate-fade-in">
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 6.96L21 11l-6.61 2.04L12 20l-2.39-6.96L3 11l6.61-2.04L12 2z"/></svg>
+            </div>
+            <div class="max-w-[80%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 shadow-sm border border-gray-100 dark:border-gray-700 leading-relaxed">
+                Hola 👋 soy la Inteligencia Artificial de BioControl. Conozco el riesgo exacto de tu zona, el clima actual y los reportes de tus vecinos. ¿Qué duda tienes sobre plagas hoy?
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-2 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-3">
+        <input id="chat-input" type="text" placeholder="Escribe tu duda…" class="flex-1 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:text-white dark:placeholder-gray-500 transition-all">
+        <button id="chat-send" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors transform active:scale-95">
+            <svg class="h-4 w-4 ml-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- Chat FAB -->
+<button id="chat-fab" class="fixed bottom-6 right-4 sm:right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all duration-300">
+    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 6.96L21 11l-6.61 2.04L12 20l-2.39-6.96L3 11l6.61-2.04L12 2z"/></svg>
+</button>
+
+<script>
+/* ================================================================
+   CONFIGURACIÓN
+   ================================================================ */
+const API_BASE = '';
+let MAPBOX_TOKEN = '';
+
+const TIPO_COLORS = {
+    basura_organica:   '#ef4444',
+    fuga_agua:         '#3b82f6',
+    terreno_baldio:    '#f59e0b',
+    barranca_sucia:    '#8b5cf6',
+    basura_inorganica: '#6b7280',
+};
+
+const TIPO_LABELS = {
+    basura_organica:   '🗑️ Basura Orgánica',
+    fuga_agua:         '💧 Fuga de Agua',
+    terreno_baldio:    '🌿 Terreno Baldío',
+    barranca_sucia:    '🏚️ Barranca Sucia',
+    basura_inorganica: '📦 Basura Inorgánica',
+};
+
+/* ================================================================
+   ESTADO GLOBAL
+   ================================================================ */
+let userLat = null;
+let userLng = null;
+let geoReady = false;
+let chatBusy = false;
+let map = null;
+let mapMarkers = [];
+let userMarkerEl = null;
+
+/* ================================================================
+   THEME (DARK MODE)
+   ================================================================ */
+const themeToggleBtn = document.getElementById('theme-toggle');
+const themeToggleDarkIcon = document.getElementById('theme-toggle-dark');
+const themeToggleLightIcon = document.getElementById('theme-toggle-light');
+
+if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.documentElement.classList.add('dark');
+    themeToggleLightIcon.classList.remove('hidden');
+} else {
+    document.documentElement.classList.remove('dark');
+    themeToggleDarkIcon.classList.remove('hidden');
+}
+
+themeToggleBtn.addEventListener('click', function() {
+    themeToggleDarkIcon.classList.toggle('hidden');
+    themeToggleLightIcon.classList.toggle('hidden');
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('color-theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('color-theme', 'dark');
+    }
+});
+
+/* ================================================================
+   SPA ROUTING Y SIDEBAR
+   ================================================================ */
+const sidebar = document.getElementById('sidebar');
+const mobileOverlay = document.getElementById('mobile-overlay');
+
+function toggleMobileMenu() {
+    sidebar.classList.toggle('mobile-open');
+    mobileOverlay.classList.toggle('hidden');
+}
+
+document.getElementById('sidebar-toggle').addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+    if (map) setTimeout(() => map.resize(), 300);
+});
+
+document.getElementById('mobile-menu-btn').addEventListener('click', toggleMobileMenu);
+document.getElementById('mobile-sidebar-close').addEventListener('click', toggleMobileMenu);
+mobileOverlay.addEventListener('click', toggleMobileMenu);
+
+function switchView(targetId) {
+    // Esconder todas las vistas
+    document.querySelectorAll('.spa-view').forEach(el => el.classList.remove('active'));
+    // Mostrar la objetivo
+    document.getElementById(targetId).classList.add('active');
+    
+    // Actualizar estilos de los botones del menú
+    document.querySelectorAll('.nav-link').forEach(btn => {
+        if(btn.dataset.target === targetId) {
+            btn.className = "nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 transition-colors";
+        } else {
+            btn.className = "nav-link w-full group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-100 transition-colors";
+        }
+    });
+
+    // Actualizar Título del Header
+    const titles = {
+        'view-dashboard': 'Panel de Riesgo',
+        'view-map': 'Mapa Interactivo',
+        'view-condiciones': 'Condiciones',
+        'view-catalogo': 'Soluciones'
+    };
+    document.getElementById('header-title').textContent = titles[targetId];
+
+    // Resize map si se abre
+    if(targetId === 'view-map' && map) {
+        setTimeout(() => map.resize(), 50);
+    }
+
+    // Cerrar menú móvil si está abierto
+    if(window.innerWidth < 768 && sidebar.classList.contains('mobile-open')) {
+        toggleMobileMenu();
+    }
+}
+
+document.querySelectorAll('.nav-link').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        const target = e.currentTarget.dataset.target;
+        switchView(target);
+    });
+});
+
+
+/* ================================================================
+   REPORT PANEL
+   ================================================================ */
+const reportPanel = document.getElementById('report-panel');
+const reportOverlay = document.getElementById('report-overlay');
+
+function openReport() {
+    if (!geoReady) { alert('Aún estamos obteniendo tu ubicación. Intenta en unos segundos.'); return; }
+    reportOverlay.classList.remove('hidden');
+    requestAnimationFrame(() => { reportPanel.style.transform = 'translateX(0)'; });
+}
+function closeReport() {
+    reportPanel.style.transform = 'translateX(100%)';
+    setTimeout(() => reportOverlay.classList.add('hidden'), 300);
+}
+document.getElementById('open-report-btn').addEventListener('click', openReport);
+document.getElementById('close-report-btn').addEventListener('click', closeReport);
+reportOverlay.addEventListener('click', closeReport);
+
+/* ================================================================
+   GEOLOCALIZACIÓN
+   ================================================================ */
+function initGeo() {
+    if (!navigator.geolocation) { usarFallback('Tu navegador no soporta geolocalización.'); return; }
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            userLat = pos.coords.latitude;
+            userLng = pos.coords.longitude;
+            geoReady = true;
+            geoSuccess();
+        },
+        () => usarFallback('No pudimos obtener tu ubicación. Usando Puebla Centro (Por defecto).'),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+}
+
+function geoSuccess() {
+    const banner = document.getElementById('geo-banner');
+    const icon = document.getElementById('geo-icon');
+    const text = document.getElementById('geo-text');
+
+    banner.className = 'mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-300 shadow-sm transition-all';
+    icon.classList.remove('animate-spin');
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>';
+    text.textContent = `Ubicación detectada con éxito (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`;
+    document.getElementById('geo-report-info').textContent = `📍 Coordenadas de envío: ${userLat.toFixed(4)}, ${userLng.toFixed(4)} — No pedimos datos personales.`;
+
+    setTimeout(() => { banner.style.opacity = '0'; setTimeout(() => banner.style.display = 'none', 500); }, 4000);
+
+    initMap();
+    cargarDatosRiesgo();
+}
+
+function usarFallback(msg) {
+    userLat = 19.0414; userLng = -98.2063; geoReady = true;
+    const text = document.getElementById('geo-text');
+    const icon = document.getElementById('geo-icon');
+    icon.classList.remove('animate-spin');
+    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+    text.textContent = msg;
+    initMap();
+    cargarDatosRiesgo();
+}
+
+/* ================================================================
+   MAPBOX
+   ================================================================ */
+async function initMap() {
+    if (!MAPBOX_TOKEN) {
+        try {
+            const res = await fetch(`${API_BASE}/api/config`);
+            const data = await res.json();
+            MAPBOX_TOKEN = data.mapboxToken;
+        } catch (e) {
+            console.error('Error cargando configuración Mapbox:', e);
+            return;
+        }
+    }
+
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+    map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/light-v11', // En el futuro se podría cambiar a dark-v11 dinámicamente
+        center: [userLng, userLat],
+        zoom: 13.5,
+        attributionControl: false
+    });
+
+    map.addControl(new mapboxgl.NavigationControl(), 'bottom-right');
+
+    // User location marker
+    userMarkerEl = document.createElement('div');
+    userMarkerEl.className = 'map-marker-user';
+    new mapboxgl.Marker({ element: userMarkerEl })
+        .setLngLat([userLng, userLat])
+        .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML('<p style="margin:0;font-size:13px;font-weight:700;">📍 Tu ubicación</p>'))
+        .addTo(map);
+
+    map.on('load', () => {
+        cargarZonasRiesgo();
+        cargarReportesMapa();
+    });
+}
+
+function cargarZonasRiesgo() {
+    fetch('densidad.geojson')
+        .then(r => r.json())
+        .then(geojson => {
+            map.addSource('zonas-riesgo', { type: 'geojson', data: geojson });
+            map.addLayer({
+                id: 'zonas-fill',
+                type: 'fill',
+                source: 'zonas-riesgo',
+                paint: {
+                    'fill-color': [
+                        'match', ['get', 'nivel'],
+                        'alto', 'rgba(239, 68, 68, 0.20)',
+                        'medio', 'rgba(245, 158, 11, 0.15)',
+                        'bajo', 'rgba(34, 197, 94, 0.10)',
+                        'rgba(107, 114, 128, 0.08)'
+                    ],
+                    'fill-outline-color': [
+                        'match', ['get', 'nivel'],
+                        'alto', 'rgba(239, 68, 68, 0.6)',
+                        'medio', 'rgba(245, 158, 11, 0.5)',
+                        'bajo', 'rgba(34, 197, 94, 0.4)',
+                        'rgba(107, 114, 128, 0.2)'
+                    ]
+                }
+            });
+            map.addLayer({
+                id: 'zonas-line',
+                type: 'line',
+                source: 'zonas-riesgo',
+                paint: {
+                    'line-color': [
+                        'match', ['get', 'nivel'],
+                        'alto', '#ef4444',
+                        'medio', '#f59e0b',
+                        'bajo', '#22c55e',
+                        '#6b7280'
+                    ],
+                    'line-width': 1.5,
+                    'line-dasharray': [4, 3]
+                }
+            });
+        })
+        .catch(err => console.warn('No se pudo cargar densidad.geojson:', err));
+}
+
+async function cargarReportesMapa() {
+    try {
+        const res = await fetch(`${API_BASE}/api/reportes`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        mapMarkers.forEach(m => m.remove());
+        mapMarkers = [];
+
+        (data.reportes || []).forEach(r => {
+            const color = TIPO_COLORS[r.tipo_precursor] || '#6b7280';
+            const label = TIPO_LABELS[r.tipo_precursor] || r.tipo_precursor;
+            const fecha = new Date(r.created_at);
+            const hace = tiempoRelativo(fecha);
+
+            const el = document.createElement('div');
+            el.className = 'map-marker';
+            el.style.background = color;
+            el.innerHTML = '!';
+
+            const popup = new mapboxgl.Popup({ offset: 18, maxWidth: '280px' }).setHTML(`
+                <div style="font-family:Inter,sans-serif;">
+                    <p style="margin:0 0 6px;font-weight:800;font-size:14px;">${label}</p>
+                    ${r.descripcion ? `<p style="margin:0 0 8px;font-size:13px;line-height:1.4;opacity:0.9;">${escapeHtml(r.descripcion)}</p>` : ''}
+                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;opacity:0.6;border-top:1px solid rgba(128,128,128,0.2);padding-top:6px;">
+                        <span>🕐 ${hace}</span>
+                        <span>Gravedad: ${r.peso}/10</span>
+                    </div>
+                </div>
+            `);
+
+            const marker = new mapboxgl.Marker({ element: el })
+                .setLngLat([r.lng, r.lat])
+                .setPopup(popup)
+                .addTo(map);
+
+            mapMarkers.push(marker);
+        });
+    } catch (err) {
+        console.error('Error cargando reportes para mapa:', err);
+    }
+}
+
+function tiempoRelativo(fecha) {
+    const diff = Date.now() - fecha.getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `hace ${mins} min`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `hace ${hrs} h`;
+    return `hace ${Math.floor(hrs / 24)} d`;
+}
+
+/* ================================================================
+   CARGAR DATOS DE RIESGO Y PROBABILIDADES
+   ================================================================ */
+async function cargarDatosRiesgo() {
+    try {
+        const res = await fetch(`${API_BASE}/api/riesgo?lat=${userLat}&lng=${userLng}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Reportes
+        document.getElementById('card-reportes').textContent = data.cantidad_reportes;
+
+        // Riesgo Global
+        const r = data.riesgo_total;
+        const label = document.getElementById('card-riesgo-label');
+        const badge = document.getElementById('card-riesgo-badge');
+        const bar = document.getElementById('card-riesgo-bar');
+        label.textContent = `${r}/100`;
+
+        if (r >= 85) {
+            label.style.color = '#dc2626'; badge.textContent = 'Crítico';
+            badge.className = 'inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-2.5 py-0.5 text-xs font-bold text-red-700 dark:text-red-400';
+            bar.style.background = 'linear-gradient(to right, #f87171, #dc2626)';
+        } else if (r >= 70) {
+            label.style.color = '#f59e0b'; badge.textContent = 'Alto Riesgo';
+            badge.className = 'inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-400';
+            bar.style.background = 'linear-gradient(to right, #fbbf24, #ea580c)';
+        } else if (r >= 40) {
+            label.style.color = '#eab308'; badge.textContent = 'Moderado';
+            badge.className = 'inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2.5 py-0.5 text-xs font-bold text-yellow-700 dark:text-yellow-400';
+            bar.style.background = 'linear-gradient(to right, #fde047, #eab308)';
+        } else {
+            label.style.color = '#10b981'; badge.textContent = 'Riesgo Bajo';
+            badge.className = 'inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400';
+            bar.style.background = 'linear-gradient(to right, #6ee7b7, #10b981)';
+        }
+        setTimeout(() => { bar.style.width = `${r}%`; }, 100);
+
+        // Clima
+        document.getElementById('card-temp').textContent = `${data.clima.temp}°C`;
+        document.getElementById('card-humedad').textContent = `${data.clima.humedad}% Húm.`;
+        const ic = data.clima.indice_clima;
+        const nv = ic >= 0.8 ? 'Alta incubación' : ic >= 0.6 ? 'Media' : 'Baja';
+        document.getElementById('card-clima-indice').textContent = `Id. Climático: ${ic.toFixed(2)} (${nv})`;
+
+        // Probabilidades de Plagas
+        if(data.probabilidades) {
+            const pM = data.probabilidades.mosquitos;
+            const pC = data.probabilidades.cucarachas;
+            const pR = data.probabilidades.ratas;
+            
+            document.getElementById('prob-mosquitos-txt').textContent = `${pM}%`;
+            document.getElementById('prob-cucarachas-txt').textContent = `${pC}%`;
+            document.getElementById('prob-ratas-txt').textContent = `${pR}%`;
+
+            setTimeout(() => {
+                document.getElementById('prob-mosquitos-bar').style.width = `${pM}%`;
+                document.getElementById('prob-mosquitos-bar').style.background = pM > 70 ? '#ef4444' : pM > 40 ? '#f59e0b' : '#3b82f6';
+                
+                document.getElementById('prob-cucarachas-bar').style.width = `${pC}%`;
+                document.getElementById('prob-cucarachas-bar').style.background = pC > 70 ? '#ef4444' : pC > 40 ? '#f59e0b' : '#f59e0b';
+                
+                document.getElementById('prob-ratas-bar').style.width = `${pR}%`;
+                document.getElementById('prob-ratas-bar').style.background = pR > 70 ? '#ef4444' : pR > 40 ? '#f59e0b' : '#6b7280';
+            }, 300);
+        }
+
+        // Alerta
+        const alerta = document.getElementById('alerta-riesgo');
+        if (data.mensaje_alerta) {
+            alerta.style.display = 'block';
+            alerta.classList.remove('hidden');
+            alerta.className = r >= 85
+                ? 'mb-6 block rounded-xl border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 px-5 py-4 text-sm font-semibold text-red-800 dark:text-red-300 animate-fade-in shadow-sm xl:max-w-6xl'
+                : 'mb-6 block rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 px-5 py-4 text-sm font-semibold text-amber-800 dark:text-amber-300 animate-fade-in shadow-sm xl:max-w-6xl';
+            alerta.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <span>${data.mensaje_alerta}</span>
+                </div>`;
+        } else {
+            alerta.style.display = 'none';
+        }
+    } catch (err) {
+        console.error('Error cargando riesgo:', err);
+        document.getElementById('card-reportes').textContent = '—';
+        document.getElementById('card-riesgo-label').textContent = 'N/A';
+        document.getElementById('card-temp').textContent = '—';
+    }
+}
+
+/* ================================================================
+   ENVÍO DE REPORTE
+   ================================================================ */
+document.getElementById('submit-report').addEventListener('click', async () => {
+    const tipo = document.getElementById('tipo_precursor').value;
+    const descripcion = document.getElementById('descripcion').value;
+    const btn = document.getElementById('submit-report');
+    const ok = document.getElementById('report-success');
+    const err = document.getElementById('report-error');
+
+    if (!tipo) { showReportMsg(err, 'Selecciona una categoría primero.'); return; }
+    if (!geoReady) { showReportMsg(err, 'Obteniendo tu ubicación...'); return; }
+
+    btn.disabled = true; btn.textContent = 'Procesando…';
+    ok.classList.add('hidden'); err.classList.add('hidden');
+
+    try {
+        const res = await fetch(`${API_BASE}/api/reportar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lat: userLat, lng: userLng, tipo_precursor: tipo, descripcion })
+        });
+        if (!res.ok) throw new Error('No se pudo guardar el reporte');
+        const data = await res.json();
+
+        showReportMsg(ok, `✓ Reporte exitoso. Gracias por tu ayuda ciudadana.`);
+        document.getElementById('tipo_precursor').value = '';
+        document.getElementById('descripcion').value = '';
+
+        cargarDatosRiesgo();
+        if (map) cargarReportesMapa();
+
+        setTimeout(() => { closeReport(); ok.classList.add('hidden'); }, 2500);
+    } catch (e) {
+        showReportMsg(err, `Ocurrió un error. Intenta más tarde.`);
+    } finally {
+        btn.disabled = false; btn.textContent = 'Subir Reporte Anónimo';
+    }
+});
+
+function showReportMsg(el, msg) {
+    el.textContent = msg; el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 4000);
+}
+
+/* ================================================================
+   CHATBOT GEMINI
+   ================================================================ */
+const chatWindow = document.getElementById('chat-window');
+const chatHistory = document.getElementById('chat-history');
+const chatInput = document.getElementById('chat-input');
+const chatSend = document.getElementById('chat-send');
+const chatStatus = document.getElementById('chat-status');
+
+document.getElementById('chat-fab').addEventListener('click', () => {
+    const hidden = chatWindow.classList.toggle('hidden');
+    if (!hidden) chatInput.focus();
+});
+document.getElementById('close-chat-btn').addEventListener('click', () => chatWindow.classList.add('hidden'));
+
+function appendMsg(role, text) {
+    const div = document.createElement('div');
+    div.className = 'flex items-start gap-3 animate-fade-in' + (role === 'user' ? ' flex-row-reverse' : '');
+    if (role === 'bot') {
+        div.innerHTML = `
+            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm mt-1">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 6.96L21 11l-6.61 2.04L12 20l-2.39-6.96L3 11l6.61-2.04L12 2z"/></svg>
+            </div>
+            <div class="max-w-[80%] rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-800 dark:text-gray-200 shadow-sm border border-gray-100 dark:border-gray-700 leading-relaxed">${formatResp(text)}</div>`;
+    } else {
+        div.innerHTML = `<div class="max-w-[80%] rounded-2xl rounded-tr-sm bg-emerald-600 px-4 py-3 text-sm text-white shadow-sm mt-1 leading-relaxed">${escapeHtml(text)}</div>`;
+    }
+    chatHistory.appendChild(div);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function showThinking() {
+    const d = document.createElement('div');
+    d.className = 'flex items-start gap-3 animate-fade-in mt-1'; d.id = 'thinking-indicator';
+    d.innerHTML = `
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+            <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l2.39 6.96L21 11l-6.61 2.04L12 20l-2.39-6.96L3 11l6.61-2.04L12 2z"/></svg>
+        </div>
+        <div class="flex items-center gap-1.5 rounded-2xl rounded-tl-sm bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 px-5 py-4 shadow-sm">
+            <span class="thinking-dot h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span class="thinking-dot h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span class="thinking-dot h-2 w-2 rounded-full bg-emerald-500"></span>
+        </div>`;
+    chatHistory.appendChild(d);
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+}
+
+function removeThinking() { const el = document.getElementById('thinking-indicator'); if (el) el.remove(); }
+function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function formatResp(t) { return escapeHtml(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/\n/g,'<br>'); }
+
+async function enviarChat() {
+    const msg = chatInput.value.trim();
+    if (!msg || chatBusy) return;
+    if (!geoReady) { appendMsg('bot', 'Danos un segundo, estamos obteniendo tu ubicación.'); return; }
+
+    chatBusy = true;
+    chatInput.value = ''; chatInput.disabled = true; chatSend.disabled = true;
+    chatStatus.textContent = 'Analizando…';
+    appendMsg('user', msg);
+    showThinking();
+
+    try {
+        const res = await fetch(`${API_BASE}/api/chatbot`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mensaje: msg, lat: userLat, lng: userLng })
+        });
+        removeThinking();
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        appendMsg('bot', data.respuesta);
+    } catch (e) {
+        removeThinking();
+        appendMsg('bot', `Lo siento, el servidor está ocupado. Intenta de nuevo.`);
+    } finally {
+        chatBusy = false; chatInput.disabled = false; chatSend.disabled = false;
+        chatStatus.textContent = 'En línea'; chatInput.focus();
+    }
+}
+
+chatSend.addEventListener('click', enviarChat);
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviarChat(); } });
+
+/* ================================================================
+   INIT
+   ================================================================ */
+initGeo();
+</script>
+
+</body>
+</html>

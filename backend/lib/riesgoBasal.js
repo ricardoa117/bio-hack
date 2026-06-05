@@ -1,4 +1,4 @@
-﻿import { readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { point, booleanPointInPolygon } from '@turf/turf';
 import path from 'path';
 
@@ -6,7 +6,7 @@ let geojson = null;
 
 function cargarGeoJSON() {
   if (!geojson) {
-    const filePath = path.join(process.cwd(), '..', 'frontend', 'public', 'densidad.geojson');
+    const filePath = path.join(process.cwd(), 'public', 'densidad.geojson');
     try {
       geojson = JSON.parse(readFileSync(filePath, 'utf8'));
     } catch (error) {

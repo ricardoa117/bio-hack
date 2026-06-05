@@ -1,4 +1,4 @@
-﻿import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '../../lib/supabaseClient';
 import { getRiesgoBasal } from '../../lib/riesgoBasal';
 import { getDatosClima, calcularIndiceClima } from '../../lib/clima';
@@ -47,9 +47,9 @@ export default async function handler(req, res) {
     const sumaNorm = Math.min(100, suma * 2);
     const riesgoTotal = Math.min(100, Math.round(riesgoBasal * 0.5 + sumaNorm * 0.3 + indiceClima * 100 * 0.2));
     const densidadTexto = riesgoBasal > 70 ? 'alta' : riesgoBasal > 40 ? 'media' : 'baja';
-    const contexto = El usuario está en una zona de densidad  con un riesgo de plagas de /100. Factores cercanos: . Clima actual: °C, humedad % (índice climático ).;
+    const contexto = `El usuario está en una zona de densidad ${densidadTexto} con un riesgo de plagas de ${riesgoTotal}/100. Factores cercanos: ${factores}. Clima actual: ${temp}°C, humedad ${humedad}% (índice climático ${indiceClima}).`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const chat = model.startChat({
       history: [
         {

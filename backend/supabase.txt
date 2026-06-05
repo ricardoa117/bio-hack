@@ -1,0 +1,64 @@
+-- Habilitar extensión PostGIS si no está
+create extension if not exists postgis;
+
+-- Recrear tabla reportes (borra la existente si ya la tenías, cuidado con datos previos)
+drop table if exists reportes cascade;
+
+create table reportes (
+  id bigint generated always as identity primary key,
+  lat double precision not null,
+  lng double precision not null,
+  tipo_precursor text not null,
+  peso integer not null,
+  descripcion text default '',
+  created_at timestamptz default now(),
+  geom geometry(Point, 4326) generated always as (
+    st_setsrid(st_makepoint(lng, lat), 4326)
+  ) stored
+);
+
+-- Índice espacial
+create index idx_reportes_geom on reportes using gist (geom);
+
+-- Políticas de seguridad
+alter table reportes enable row level security;
+create policy "anon_insert" on reportes for insert to anon with check (true);
+create policy "anon_select" on reportes for select to anon using (true);
+
+-- Función para obtener reportes cercanos
+create or replace function reportes_cercanos(
+  p_lat double precision,
+  p_lng double precision,
+  radius_meters int default 1000
+)
+returns table (
+  id bigint,
+  tipo_precursor text,
+  peso int,
+  created_at timestamptz,
+  distancia_m float
+) as $$
+begin
+  return query
+  select r.id, r.tipo_precursor, r.peso, r.created_at,
+         st_distance(r.geom::geography, st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography) as distancia_m
+  from reportes r
+  where st_dwithin(r.geom::geography, st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography, radius_meters)
+    and r.created_at > now() - interval '72 hours'
+  order by distancia_m;
+end;
+$$ language plpgsql;
+
+-- Insertar datos semilla de Puebla
+insert into reportes (lat, lng, tipo_precursor, peso, descripcion, created_at)
+values
+  (19.0430, -98.1980, 'basura_organica', 10, 'Bolsa rota en esquina 16 de Septiembre', now() - interval '2 hours'),
+  (19.0450, -98.2030, 'fuga_agua', 8, 'Fuga en tubería frente al Zócalo', now() - interval '5 hours'),
+  (19.0420, -98.1970, 'terreno_baldio', 6, 'Lote con maleza alta en 10 Oriente', now() - interval '1 day'),
+  (19.0410, -98.2050, 'barranca_sucia', 7, 'Barranca con basura en La Paz', now() - interval '8 hours'),
+  (19.0200, -98.2250, 'basura_inorganica', 4, 'Escombros en Angelópolis', now() - interval '3 hours'),
+  (19.0220, -98.2230, 'fuga_agua', 8, 'Agua estancada en estacionamiento', now() - interval '6 hours'),
+  (19.0550, -98.2100, 'basura_organica', 10, 'Residuos de mercado La Acocota', now() - interval '4 hours'),
+  (19.0300, -98.1850, 'terreno_baldio', 6, 'Lote abandonado en San Manuel', now() - interval '2 days'),
+  (19.0280, -98.1900, 'barranca_sucia', 7, 'Barranca con escombros', now() - interval '12 hours'),
+  (19.0480, -98.1950, 'fuga_agua', 8, 'Fuga en calle 5 de Mayo', now() - interval '1 hour');

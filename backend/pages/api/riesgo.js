@@ -1,4 +1,4 @@
-﻿import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient';
 import { getRiesgoBasal } from '../../lib/riesgoBasal';
 import { getDatosClima, calcularIndiceClima } from '../../lib/clima';
 
@@ -31,6 +31,9 @@ export default async function handler(req, res) {
       radius_meters: 1000,
     });
 
+    console.log('RPC Error:', error);
+    console.log('RPC Reportes:', reportes);
+
     let sumaNormalizada = 0;
     if (!error && reportes) {
       const now = new Date();
@@ -46,8 +49,25 @@ export default async function handler(req, res) {
     const { humedad, temp } = await getDatosClima(latF, lngF);
     const indiceClima = calcularIndiceClima(humedad, temp);
 
+    // Pest Probability Calculations
+    let pesoAgua = 0;
+    let pesoBasura = 0;
+    let pesoBaldio = 0;
+
+    if (!error && reportes) {
+      reportes.forEach((r) => {
+        if (r.tipo_precursor === 'fuga_agua' || r.tipo_precursor === 'barranca_sucia') pesoAgua += r.peso;
+        if (r.tipo_precursor === 'basura_organica' || r.tipo_precursor === 'barranca_sucia') pesoBasura += r.peso;
+        if (r.tipo_precursor === 'terreno_baldio' || r.tipo_precursor === 'basura_inorganica') pesoBaldio += r.peso;
+      });
+    }
+
+    const probMosquitos = Math.min(100, Math.round(riesgoBasal * 0.4 + pesoAgua * 3 + indiceClima * 40));
+    const probCucarachas = Math.min(100, Math.round(riesgoBasal * 0.5 + pesoBasura * 3 + (temp > 25 ? 15 : 0)));
+    const probRatas = Math.min(100, Math.round(riesgoBasal * 0.5 + pesoBasura * 2 + pesoBaldio * 2));
+
     const riesgoTotal = Math.round(
-      riesgoBasal * 0.5 + sumaNormalizada * 0.3 + indiceClima * 100 * 0.2
+      riesgoBasal * 0.4 + sumaNormalizada * 0.4 + indiceClima * 100 * 0.2
     );
     const riesgoTotalLimitado = Math.min(100, riesgoTotal);
 
@@ -63,6 +83,11 @@ export default async function handler(req, res) {
       riesgo_basal: riesgoBasal,
       suma_reportes: sumaNormalizada,
       cantidad_reportes: reportes?.length || 0,
+      probabilidades: {
+        mosquitos: probMosquitos,
+        cucarachas: probCucarachas,
+        ratas: probRatas
+      },
       mensaje_alerta: mensaje,
       clima: { humedad, temp, indice_clima: indiceClima },
     });
