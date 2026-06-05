@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BioControl — Condiciones de Propagación</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        body { -webkit-font-smoothing: antialiased; }
+        main::-webkit-scrollbar { width: 8px; }
+        main::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 9999px; }
+        main::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="h-full bg-gray-50 font-sans text-gray-900">
+
+<div class="flex h-full">
+
+    <aside id="sidebar" class="flex w-64 flex-col bg-white border-r border-gray-100 shrink-0 transition-all duration-300 ease-in-out">
+        <div class="flex items-center justify-between gap-2 h-16 border-b border-gray-100 px-4">
+            <div class="flex items-center gap-2.5 overflow-hidden">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-700 text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12c1.5 1.5 4.5 1.5 6 0"/><path d="M12 7v5"/>
+                    </svg>
+                </div>
+                <span class="sb-label text-lg font-bold tracking-tight whitespace-nowrap">Bio<span class="text-emerald-700">Control</span></span>
+            </div>
+            <button id="sidebar-toggle" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-colors" aria-label="Contraer menú">
+                <svg id="toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-3 py-5 space-y-1">
+            <a href="index.html" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors" title="Generar Reporte Público">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                <span class="sb-label whitespace-nowrap">Reporte Ciudadano</span>
+            </a>
+
+            <button class="group flex w-full items-center gap-3 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm font-semibold text-emerald-800" title="Condiciones de Propagación">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 18a3 3 0 1 0 6 0c0-2-3-3-3-6"/>
+                </svg>
+                <span class="sb-label whitespace-nowrap text-left">Condiciones de Propagación</span>
+            </button>
+
+            <a href="#" class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-colors" title="Catálogo de Soluciones">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span class="sb-label whitespace-nowrap">Catálogo de Soluciones</span>
+            </a>
+        </nav>
+
+        <div class="border-t border-gray-100 p-4">
+            <p class="sb-label text-xs leading-relaxed text-gray-400">Sistema de prevención y monitoreo de vectores.</p>
+        </div>
+    </aside>
+
+    <div class="flex flex-1 flex-col min-w-0">
+
+        <header class="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-gray-100 bg-white px-4 sm:px-6">
+            <div>
+                <h1 class="text-lg font-bold tracking-tight text-gray-900">Condiciones de Propagación</h1>
+                <p class="hidden sm:block text-xs text-gray-500">Guía de identificación y prevención de principales plagas locales</p>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <div class="flex flex-col rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-48 w-full bg-gray-200 relative">
+                        <img src="img/cucaracha-alemana.png" alt="Cucaracha Alemana" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Cucaracha+Alemana'">
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Cucaracha Alemana</h2>
+
+                        <div class="mb-4">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Propagación
+                            </h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">Requiere ambientes cálidos, húmedos y con acceso cercano a comida y agua. Se propagan rápidamente en cocinas, despensas, motores de electrodomésticos (refrigeradores, microondas) y baños. Tienen una tasa de reproducción sumamente alta.</p>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                Prevención
+                            </h3>
+                            <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                                <li>Limpieza profunda de grasa en estufas.</li>
+                                <li>No dejar trastes sucios ni comida expuesta en la noche.</li>
+                                <li>Sellar grietas en azulejos y zoclos.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-48 w-full bg-gray-200 relative">
+                        <img src="img/cucaracha-americana.png" alt="Cucaracha Americana" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Cucaracha+Americana'">
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Cucaracha Americana</h2>
+
+                        <div class="mb-4">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Propagación
+                            </h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">Prefieren lugares oscuros, cálidos y con mucha humedad, como sótanos, drenajes, alcantarillas, tuberías y registros registros sanitarios. Suelen ingresar a las viviendas desde el exterior buscando alimento, especialmente basura en descomposición.</p>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                Prevención
+                            </h3>
+                            <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                                <li>Colocar mallas en coladeras y resumideros.</li>
+                                <li>Reparar fugas de agua y goteras.</li>
+                                <li>Mantener la basura exterior en contenedores herméticos.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-48 w-full bg-gray-200 relative">
+                        <img src="img/rata.png" alt="Rata" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Rata'">
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Rata</h2>
+
+                        <div class="mb-4">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Propagación
+                            </h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">Proliferan en áreas con acumulación excesiva de basura, escombros, madera apilada y alcantarillas abiertas. Necesitan una fuente constante de agua y alimento (restos orgánicos, alimento para mascotas). Crean madrigueras subterráneas o en techos.</p>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                Prevención
+                            </h3>
+                            <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                                <li>Eliminar acumulación de escombros y cajas viejas.</li>
+                                <li>No dejar alimento de mascotas en patios por la noche.</li>
+                                <li>Sellar agujeros en paredes mayores a 2 cm.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-48 w-full bg-gray-200 relative">
+                        <img src="img/raton.png" alt="Ratón" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Raton'">
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Ratón</h2>
+
+                        <div class="mb-4">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Propagación
+                            </h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">Buscan refugio en interiores, especialmente cuando baja la temperatura. Anidan en espacios pequeños (huecos de paredes, detrás de muebles, cajones olvidados). Se reproducen a un ritmo alarmante si tienen acceso a migajas, semillas o cereales.</p>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                Prevención
+                            </h3>
+                            <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                                <li>Guardar granos y cereales en frascos de vidrio o plástico duro.</li>
+                                <li>Sellar grietas muy pequeñas (pueden pasar por huecos de 6mm).</li>
+                                <li>Mantener despejadas las bases de los muebles.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col rounded-2xl border border-gray-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                    <div class="h-48 w-full bg-gray-200 relative">
+                        <img src="img/mosco-dengue.png" alt="Mosco del Dengue" class="absolute inset-0 h-full w-full object-cover" onerror="this.src='https://via.placeholder.com/400x200?text=Foto+Mosco+Dengue'">
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h2 class="text-lg font-bold text-gray-900 mb-4">Mosco del Dengue (Aedes aegypti)</h2>
+
+                        <div class="mb-4">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Propagación
+                            </h3>
+                            <p class="text-sm text-gray-600 leading-relaxed">Su condición vital de propagación es el agua limpia y estancada. La hembra deposita sus huevos en las paredes de recipientes con agua (cubetas, llantas, macetas, bebederos, floreros). Predominan en climas cálidos y zonas urbanas.</p>
+                        </div>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100">
+                            <h3 class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-2 flex items-center gap-1">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                Prevención
+                            </h3>
+                            <ul class="text-sm text-gray-600 list-disc list-inside space-y-1">
+                                <li>Aplicar la regla: "Lava, tapa, voltea y tira".</li>
+                                <li>Evitar acumulación de agua en llantas o recipientes exteriores.</li>
+                                <li>Cambiar el agua de floreros y bebederos de mascotas seguido.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    /* ---------- Collapsible sidebar ---------- */
+    const sidebar = document.getElementById('sidebar');
+    const sbToggle = document.getElementById('sidebar-toggle');
+    let collapsed = false;
+    sbToggle.addEventListener('click', () => {
+        collapsed = !collapsed;
+        sidebar.classList.toggle('w-64', !collapsed);
+        sidebar.classList.toggle('w-20', collapsed);
+        document.querySelectorAll('.sb-label').forEach(el => el.classList.toggle('hidden', collapsed));
+    });
+</script>
+</body>
+</html>
