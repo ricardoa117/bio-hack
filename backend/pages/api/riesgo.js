@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     const { data: reportes, error } = await supabase.rpc('reportes_cercanos', {
       lat: latF,
       lng: lngF,
-      radius_meters: 1000,
+      radius_meters: 15000,
     });
 
     console.log('RPC Error:', error);
