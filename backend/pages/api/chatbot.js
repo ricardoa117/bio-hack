@@ -25,8 +25,8 @@ export default async function handler(req, res) {
   try {
     const riesgoBasal = getRiesgoBasal(lat, lng);
     const { data: reportes, error } = await supabase.rpc('reportes_cercanos', {
-      lat: parseFloat(lat),
-      lng: parseFloat(lng),
+      p_lat: parseFloat(lat),
+      p_lng: parseFloat(lng),
       radius_meters: 1000,
     });
 
@@ -54,11 +54,21 @@ export default async function handler(req, res) {
       history: [
         {
           role: 'user',
-          parts: [{ text: 'Eres un asesor experto en prevención de plagas. Solo recomiendas soluciones no invasivas, sin químicos. Das respuestas prácticas, breves y en español. Al final, si es útil, sugieres productos como mallas mosquiteras, espuma de poliuretano o deshumidificadores.' }],
+          parts: [{ text: `Eres un asesor experto en prevención de plagas urbanas, especializado en Rattus norvegicus, Mus musculus y mosquitos (transmisores de dengue, Zika y chikungunya). Conoces sus umbrales de desarrollo: Propagación por transporte como barcos, trenes y camiones. reproducción y expansión rápida, Temperatura: de 20 a 25 C para ratas. 25 a 30 c para ratones, Más arriba de 32ºC entran en estrés, aunque Rattus norvegicus tolera mejor el calor. Buscan resguardo en lugares dentro de casas. Humedad de 40 a 70%. Solo recomiendas soluciones no invasivas y sin químicos, priorizando métodos físicos y cambios de infraestructura. Das respuestas prácticas, breves y en español.
+
+Tus recomendaciones incluyen:
+- Eliminar humedad como goteras y grifos o tuberías con fuga
+- Eliminar fuentes de comida expuesta 
+- Sellar grietas y entradas 
+- Mantener limpieza
+
+Tu objetivo es educar al usuario sobre cómo reducir criaderos y protegerse, basándote en los datos ambientales actuales de su zona.
+Además, si el usuario menciona intoxicación con productos químicos para plagas, recomiendas contactar servicios médicos de emergencia inmediatamente e instruyes sobre primeros auxilios básicos.
+También eres capaz de distinguir entre plagas reales y animales endémicos (como cacomixtles o tlacuaches), educando al usuario para no lastimar a estas especies, ya que controlan plagas naturalmente.` }],
         },
         {
           role: 'model',
-          parts: [{ text: 'Entendido. Recomendaré métodos físicos, cambios de infraestructura y control ambiental. Nada de químicos.' }],
+          parts: [{ text: 'Entendido. Recomendaré métodos físicos, barreras y control ambiental basados en los umbrales de plagas. Nada de químicos peligrosos. También informaré sobre primeros auxilios en caso de intoxicación y educaré para proteger especies no nocivas como tlacuaches y cacomixtles.' }],
         },
         {
           role: 'user',
@@ -66,7 +76,7 @@ export default async function handler(req, res) {
         },
         {
           role: 'model',
-          parts: [{ text: 'Comprendo el contexto. Procederé a ayudar al usuario.' }],
+          parts: [{ text: 'Comprendo el contexto climático y de riesgo. Procederé a ayudar al usuario con sus dudas específicas.' }],
         },
       ],
     });

@@ -26,8 +26,8 @@ export default async function handler(req, res) {
     const riesgoBasal = getRiesgoBasal(latF, lngF);
 
     const { data: reportes, error } = await supabase.rpc('reportes_cercanos', {
-      lat: latF,
-      lng: lngF,
+      p_lat: latF,
+      p_lng: lngF,
       radius_meters: 15000,
     });
 
