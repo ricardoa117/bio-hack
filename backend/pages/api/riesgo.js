@@ -55,6 +55,7 @@ export default async function handler(req, res) {
     let pesoBaldio = 0;
 
     if (!error && reportes) {
+      const now = new Date();
       reportes.forEach((r) => {
         const horas = (now - new Date(r.created_at)) / 36e5;
         const temporalFactor = Math.max(0, 1 - horas / 72);
