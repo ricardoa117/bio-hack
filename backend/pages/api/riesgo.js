@@ -56,9 +56,16 @@ export default async function handler(req, res) {
 
     if (!error && reportes) {
       reportes.forEach((r) => {
-        if (r.tipo_precursor === 'fuga_agua' || r.tipo_precursor === 'barranca_sucia') pesoAgua += r.peso;
-        if (r.tipo_precursor === 'basura_organica' || r.tipo_precursor === 'barranca_sucia') pesoBasura += r.peso;
-        if (r.tipo_precursor === 'terreno_baldio' || r.tipo_precursor === 'basura_inorganica') pesoBaldio += r.peso;
+        const horas = (now - new Date(r.created_at)) / 36e5;
+        const temporalFactor = Math.max(0, 1 - horas / 72);
+        
+        // Decaimiento espacial: Pierde fuerza exponencialmente después de 1km
+        const spatialFactor = Math.exp(-r.distancia_m / 1500); 
+        const adjustedPeso = r.peso * temporalFactor * spatialFactor;
+
+        if (r.tipo_precursor === 'fuga_agua' || r.tipo_precursor === 'barranca_sucia') pesoAgua += adjustedPeso;
+        if (r.tipo_precursor === 'basura_organica' || r.tipo_precursor === 'barranca_sucia') pesoBasura += adjustedPeso;
+        if (r.tipo_precursor === 'terreno_baldio' || r.tipo_precursor === 'basura_inorganica') pesoBaldio += adjustedPeso;
       });
     }
 
