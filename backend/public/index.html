@@ -1167,6 +1167,9 @@ async function cargarDatosRiesgo() {
             }, 300);
         }
 
+        // Llamar a la función del panel de alertas
+        actualizarPanelAlertas(data);
+
         // Alerta
         const alerta = document.getElementById('alerta-riesgo');
         if (data.mensaje_alerta) {
